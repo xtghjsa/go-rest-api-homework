@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"net/http"
 
@@ -39,15 +41,69 @@ var tasks = map[string]Task{
 	},
 }
 
-// Ниже напишите обработчики для каждого эндпоинта
-// ...
+// Обработчик для отправки задачи на сервер
+func postTask(a http.ResponseWriter, b *http.Request) {
+	var task Task
+	var buf bytes.Buffer
+	_, err := buf.ReadFrom(b.Body)
+	if err != nil {
+		http.Error(a, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if err = json.Unmarshal(buf.Bytes(), &task); err != nil {
+		http.Error(a, err.Error(), http.StatusBadRequest)
+		return
+	}
+	tasks[task.ID] = task
+	a.Header().Set("Content-Type", "application/json")
+	a.WriteHeader(http.StatusCreated)
+}
 
+// Обработчик для получения всех задач
+func getTasks(a http.ResponseWriter, b *http.Request) {
+	resp, err := json.Marshal(tasks)
+	if err != nil {
+		http.Error(a, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	a.Header().Set("Content-Type", "application/json")
+	a.WriteHeader(http.StatusOK)
+	a.Write(resp)
+}
+
+// Обработчик для получения задачи по ID
+func getTaskId(a http.ResponseWriter, b *http.Request) {
+	id := chi.URLParam(b, "id")
+	task, ok := tasks[id]
+	if !ok {
+		http.Error(a, "Task not found", http.StatusBadRequest)
+	}
+	resp, err := json.Marshal(task)
+	if err != nil {
+		http.Error(a, err.Error(), http.StatusBadRequest)
+		return
+	}
+	a.Header().Set("Content-Type", "application/json")
+	a.WriteHeader(http.StatusOK)
+	a.Write(resp)
+}
+
+// Обработчик удаления задачи по ID
+func delTask(a http.ResponseWriter, b *http.Request) {
+	id := chi.URLParam(b, "id")
+	_, ok := tasks[id]
+	if !ok {
+		http.Error(a, "", http.StatusBadRequest)
+	}
+	delete(tasks, id)
+	a.WriteHeader(http.StatusOK)
+}
 func main() {
 	r := chi.NewRouter()
-
-	// здесь регистрируйте ваши обработчики
-	// ...
-
+	r.Post("/tasks", postTask)
+	r.Get("/tasks", getTasks)
+	r.Get("/tasks/{id}", getTaskId)
+	r.Delete("/tasks/{id}", delTask)
 	if err := http.ListenAndServe(":8080", r); err != nil {
 		fmt.Printf("Ошибка при запуске сервера: %s", err.Error())
 		return
