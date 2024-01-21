@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -70,7 +71,7 @@ func getTasks(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	_, err = w.Write(resp)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Println(err)
 		return
 	}
 	return
@@ -82,6 +83,7 @@ func getTaskId(w http.ResponseWriter, r *http.Request) {
 	task, ok := tasks[id]
 	if !ok {
 		http.Error(w, "Task not found", http.StatusBadRequest)
+		return
 	}
 	resp, err := json.Marshal(task)
 	if err != nil {
@@ -92,7 +94,7 @@ func getTaskId(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	_, err = w.Write(resp)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Println(err)
 		return
 	}
 	return
@@ -104,6 +106,7 @@ func delTask(w http.ResponseWriter, r *http.Request) {
 	_, ok := tasks[id]
 	if !ok {
 		http.Error(w, "Wrong id", http.StatusBadRequest)
+		return
 	}
 	delete(tasks, id)
 	w.WriteHeader(http.StatusOK)
